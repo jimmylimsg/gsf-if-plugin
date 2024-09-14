@@ -1,1 +1,1 @@
-export type YourGlobalConfig = Record<string, any>;
+export type TextConfig = Record<string, any>;

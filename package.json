@@ -1,5 +1,5 @@
 {
-  "name": "if-plugin-template",
+  "name": "if-textplugin",
   "description": "Impact Framework plugins template.",
   "version": "v0.1.1",
   "author": {
@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@grnsft/if-core": "^0.0.7",
-    "typescript": "^5.1.6"
+    "typescript": "^5.6.2"
   },
   "devDependencies": {
     "@babel/core": "7.22.10",

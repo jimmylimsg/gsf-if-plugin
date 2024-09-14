@@ -1,13 +1,11 @@
 import {ERRORS} from '@grnsft/if-core/utils';
 import {PluginParams, ExecutePlugin} from '@grnsft/if-core/types';
 
-import {YourGlobalConfig} from './types';
+import {TextConfig} from './types';
 
 const {GlobalConfigError} = ERRORS;
 
-export const MyCustomPlugin = (
-  globalConfig: YourGlobalConfig
-): ExecutePlugin => {
+export const TextPlugin = (globalConfig: TextConfig): ExecutePlugin => {
   const metadata = {
     kind: 'execute',
   };
@@ -31,7 +29,14 @@ export const MyCustomPlugin = (
 
     return inputs.map(input => {
       // your logic here
-      globalConfig;
+      //globalConfig;
+      console.log(
+        'testing: ' +
+          globalConfig['something'] +
+          ', other: ' +
+          globalConfig['otherthing']
+      );
+      //console.log('testing: ' + globalConfig.something);
 
       return input;
     });

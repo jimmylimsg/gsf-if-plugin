@@ -1,1 +1,1 @@
-export {MyCustomPlugin} from './my-custom-plugin';
+export {TextPlugin} from './my-custom-plugin';
