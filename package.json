@@ -1,13 +1,13 @@
 {
-  "name": "if-textplugin",
-  "description": "Impact Framework plugins template.",
+  "name": "gsf-if-plugins",
+  "description": "Green Software Foundry's Impact Framework plugins.",
   "version": "v0.1.1",
   "author": {
-    "name": "Green Software Foundation",
+    "name": "Green Software Foundry",
     "email": "info@gsf.com"
   },
   "bugs": {
-    "url": "https://github.com/Green-Software-Foundation/if-plugin-template/issues/new?assignees=&labels=feedback&projects=&template=feedback.md&title=Feedback+-+"
+    "url": "https://github.com/jimmylimsg/gsf-if-plugin/issues/new?assignees=&labels=feedback&projects=&template=feedback.md&title=Feedback+-+"
   },
   "dependencies": {
     "@grnsft/if-core": "^0.0.7",
@@ -35,7 +35,7 @@
   "license": "MIT",
   "main": "build/index.js",
   "repository": {
-    "url": "https://github.com/Green-Software-Foundation/if-plugin-template.git"
+    "url": "https://github.com/jimmylimsg/gsf-if-plugin.git"
   },
   "scripts": {
     "build": "npm run clean && tsc --project tsconfig.build.json",

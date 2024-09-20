@@ -91,3 +91,26 @@ Now, when you run the `manifest` using the IF CLI, it will load the model automa
 ```sh
 ie --manifest <path-to-your-impl> --output <path-to-save-output>
 ```
+
+### Using local links (from Node.js script)
+
+For using locally developed model in `node.js` script, please follow these steps:
+
+1. On root level of a `node.js` project, run command below, which installs package as symlink.
+   It uses `package.json` file's `name` field as package name.
+
+```
+npm install <path\to\package> --no-save
+``` 
+
+2. In `node.js` script file, import package as below.
+
+```
+const gsf_ifPlugins = require('<package name>');
+```
+
+3. To uninstall package, run command below:
+
+```
+npm uninstall <package name> --no-save
+```

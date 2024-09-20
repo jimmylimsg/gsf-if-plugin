@@ -1,1 +1,1 @@
-export {TextPlugin} from './my-custom-plugin';
+export {AzureApiPlugin} from './my-custom-plugin';
