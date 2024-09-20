@@ -9,6 +9,7 @@ export type ApiConfig = {
   'rs-type': string;
   'rs-name': string;
   'metric-name': string;
+  'test-mode'?: boolean;
 };
 export type TokenResult = {
   token_type: string;

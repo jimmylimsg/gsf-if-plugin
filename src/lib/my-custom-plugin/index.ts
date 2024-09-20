@@ -8,6 +8,7 @@ import {
 } from './types';
 
 const {GlobalConfigError} = ERRORS;
+const {InputValidationError} = ERRORS;
 
 export const AzureApiPlugin = (globalConfig: ApiConfig): ExecutePlugin => {
   const metadata = {
@@ -19,11 +20,29 @@ export const AzureApiPlugin = (globalConfig: ApiConfig): ExecutePlugin => {
    */
   const validateGlobalConfig = () => {
     if (!globalConfig) {
-      throw new GlobalConfigError('My custom message here.');
+      throw new GlobalConfigError('Global config must be provided.');
     }
 
     // validator checks can be applied if needed
-    console.log('=> GlobalConfig: ', globalConfig);
+    if (!globalConfig['tenant-id'])
+      throw new GlobalConfigError('tenant-id must be provided.');
+    if (!globalConfig['client-id'])
+      throw new GlobalConfigError('client-id must be provided.');
+    if (!globalConfig['client-secret'])
+      throw new GlobalConfigError('client-secret must be provided.');
+    if (!globalConfig['subscription-id'])
+      throw new GlobalConfigError('subscription-id must be provided.');
+    if (!globalConfig['rs-group'])
+      throw new GlobalConfigError('rs-group must be provided.');
+    if (!globalConfig['rs-provider-ns'])
+      throw new GlobalConfigError('rs-provider-ns must be provided.');
+    if (!globalConfig['rs-type'])
+      throw new GlobalConfigError('rs-type must be provided.');
+    if (!globalConfig['rs-name'])
+      throw new GlobalConfigError('rs-name must be provided.');
+    if (!globalConfig['metric-name'])
+      throw new GlobalConfigError('metric-name must be provided.');
+    //console.log('=> GlobalConfig: ', globalConfig);
   };
 
   /**
@@ -32,7 +51,7 @@ export const AzureApiPlugin = (globalConfig: ApiConfig): ExecutePlugin => {
   const execute = async (inputs: PluginParams[]): Promise<PluginParams[]> => {
     validateGlobalConfig();
 
-    console.log('=> before: ', inputs);
+    //console.log('=> before: ', inputs);
 
     const newInputs = inputs.map(async input => {
       // your logic here
@@ -56,12 +75,23 @@ export const AzureApiPlugin = (globalConfig: ApiConfig): ExecutePlugin => {
   const callAzureApi = async (
     start_time: string
   ): Promise<MetricTimeSeriesData> => {
-    const dt_start_time: Date = new Date(start_time);
-    const dt_end_time: Date = new Date(start_time);
-    dt_end_time.setHours(dt_start_time.getHours() + 1);
-    const iso_start_time: string = dt_start_time.toISOString();
-    const iso_end_time: string = dt_end_time.toISOString();
-    //console.log('iso timespan: ',iso_start_time, iso_end_time);
+    let dt_start_time: Date;
+    let dt_end_time: Date;
+    let iso_start_time: string;
+    let iso_end_time: string;
+
+    try {
+      dt_start_time = new Date(start_time);
+      dt_end_time = new Date(start_time);
+      dt_end_time.setHours(dt_start_time.getHours() + 1);
+      iso_start_time = dt_start_time.toISOString();
+      iso_end_time = dt_end_time.toISOString();
+      //console.log('iso timespan: ',iso_start_time, iso_end_time);
+    } catch (error) {
+      throw new InputValidationError(
+        `Input's timestamp is invalid [${start_time}]. Exception: [${error}]`
+      );
+    }
 
     const tenantID = globalConfig['tenant-id'];
     const clientID = globalConfig['client-id'];
@@ -72,6 +102,14 @@ export const AzureApiPlugin = (globalConfig: ApiConfig): ExecutePlugin => {
     const rsType = globalConfig['rs-type'];
     const rsName = globalConfig['rs-name'];
     const metricName = globalConfig['metric-name'];
+    const testMode = globalConfig['test-mode'];
+
+    if (testMode === true) {
+      return {
+        timeStamp: dt_start_time,
+        average: 0.0,
+      };
+    }
 
     const tokenReqGrantType = 'client_credentials';
     const tokenReqResource = 'https://management.azure.com/';
@@ -89,7 +127,9 @@ export const AzureApiPlugin = (globalConfig: ApiConfig): ExecutePlugin => {
     //console.log(tokenApiResponse);
 
     if (!tokenApiResponse.ok) {
-      throw new Error(`Response status: ${tokenApiResponse.status}.`);
+      throw new Error(
+        `Failed to request token! Response status: ${tokenApiResponse.status}.`
+      );
     }
 
     const tokenApiJSON = await tokenApiResponse.json();
@@ -116,7 +156,9 @@ export const AzureApiPlugin = (globalConfig: ApiConfig): ExecutePlugin => {
     //console.log(metricApiResponse);
 
     if (!metricApiResponse.ok) {
-      throw new Error(`Response status: ${metricApiResponse.status}.`);
+      throw new Error(
+        `Failed to request metrics! Response status: ${metricApiResponse.status}.`
+      );
     }
 
     const metricApiJSON = await metricApiResponse.json();
@@ -124,15 +166,15 @@ export const AzureApiPlugin = (globalConfig: ApiConfig): ExecutePlugin => {
     //console.log('json: ', metricApiJSON);
     //console.log('time series: ', metric.value[0].timeseries[0].data[0]);
 
-    const curTimeSeries = metric.value[0].timeseries[0]
+    const apiTimeSeries = metric.value[0].timeseries[0]
       .data[0] as MetricTimeSeriesData;
     let newAverage = 0.0;
 
-    if (curTimeSeries.average) {
-      newAverage = Math.round(curTimeSeries.average * 100) / 100;
+    if (apiTimeSeries.average) {
+      newAverage = Math.round(apiTimeSeries.average * 100) / 100;
     }
     const newTimeSeries: MetricTimeSeriesData = {
-      timeStamp: curTimeSeries.timeStamp,
+      timeStamp: apiTimeSeries.timeStamp,
       average: newAverage,
     };
 
