@@ -1,8 +1,8 @@
 import {AzureApiPlugin} from '../../../lib/my-custom-plugin';
-import {ApiConfig} from '../../../lib/my-custom-plugin/types';
+import {AzureApiConfig} from '../../../lib/my-custom-plugin/types';
 
 describe('Normal Test: lib/my-custom-plugin: ', () => {
-  const apiConfig: ApiConfig = {
+  const apiConfig: AzureApiConfig = {
     'tenant-id': 'tid',
     'client-id': 'cid',
     'client-secret': 'csec',
@@ -15,7 +15,7 @@ describe('Normal Test: lib/my-custom-plugin: ', () => {
     'test-mode': true,
   };
 
-  describe('ApiConfig: ', () => {
+  describe('AzureApiConfig: ', () => {
     it('has properties.', () => {
       expect(apiConfig).toHaveProperty('tenant-id');
       expect(apiConfig).toHaveProperty('client-id');
@@ -49,18 +49,18 @@ describe('Normal Test: lib/my-custom-plugin: ', () => {
           },
         ];
 
-        const response = await pluginInstance.execute(inputs, {});
-        expect(typeof response).toBe(typeof inputs);
-        expect(response.length).toEqual(inputs.length);
-        expect(response[0]).toHaveProperty('throughput');
-        expect(response[0].throughput).not.toBeUndefined();
+        const outputs = await pluginInstance.execute(inputs, {});
+        expect(typeof outputs).toBe(typeof inputs);
+        expect(outputs.length).toEqual(inputs.length);
+        expect(outputs[0]).toHaveProperty('throughput');
+        expect(outputs[0].throughput).not.toBeUndefined();
       });
     });
   });
 });
 
 describe('Exception Test: lib/my-custom-plugin: ', () => {
-  const apiConfig: ApiConfig = {
+  const apiConfig: AzureApiConfig = {
     'tenant-id': 'tid',
     'client-id': 'cid',
     'client-secret': 'csec',
@@ -75,7 +75,7 @@ describe('Exception Test: lib/my-custom-plugin: ', () => {
 
   describe('AzureApiPlugin(): ', () => {
     describe('execute(): ', () => {
-      it('applies logic on missing input array, expecting exception.', async () => {
+      it('applies logic on invalid timestamp value from input array, expecting exception.', async () => {
         const pluginInstance = AzureApiPlugin(apiConfig);
         const inputs = [{}];
 
@@ -86,7 +86,23 @@ describe('Exception Test: lib/my-custom-plugin: ', () => {
         }
       });
 
-      it('applies logic on missing api config, expecting exception.', async () => {
+      it('applies logic on invalid token details from api config, expecting exception.', async () => {
+        const pluginInstance = AzureApiPlugin(apiConfig);
+        const inputs = [
+          {
+            duration: 3600,
+            timestamp: '2024-09-18T00:00:00Z',
+          },
+        ];
+
+        try {
+          await pluginInstance.execute(inputs, {});
+        } catch (error: any) {
+          expect(error.message).toMatch('Failed to request token!');
+        }
+      });
+
+      it('applies logic on invalid metric details from api config, expecting exception.', async () => {
         const pluginInstance = AzureApiPlugin(apiConfig);
         const inputs = [
           {

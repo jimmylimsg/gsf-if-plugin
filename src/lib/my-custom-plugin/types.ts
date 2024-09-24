@@ -1,5 +1,5 @@
 //export type TextConfig = Record<string, any>;
-export type ApiConfig = {
+export type AzureApiConfig = {
   'tenant-id': string;
   'client-id': string;
   'client-secret': string;
@@ -12,13 +12,13 @@ export type ApiConfig = {
   'test-mode'?: boolean;
 };
 export type TokenResult = {
-  token_type: string;
-  expires_in: string;
-  ext_expires_in: string;
-  expires_on: string;
-  not_before: string;
-  resource: string;
-  access_token: string;
+  token_type?: string;
+  expires_in?: string;
+  ext_expires_in?: string;
+  expires_on?: string;
+  not_before?: string;
+  resource?: string;
+  access_token?: string;
 };
 export type MetricResult = {
   cost: number;
@@ -56,11 +56,22 @@ export type MetricTimeSeriesData = {
   average?: number;
   total?: number;
 };
+export type ApiConfig = {
+  url: string;
+  options?: {
+    method: string;
+    headers?: {
+      [key: string]: any;
+    };
+    body?: string;
+  };
+  'test-mode'?: boolean;
+};
 export type ApiData = {
   success: boolean;
   query: {
-    input: string;
+    input?: string;
   };
   date: Date;
-  result: string;
+  result: any;
 };
