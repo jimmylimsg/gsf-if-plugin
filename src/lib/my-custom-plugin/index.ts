@@ -58,28 +58,27 @@ export const AzureApiPlugin = (globalConfig: AzureApiConfig): ExecutePlugin => {
     }
 
     const safeInputs = inputs.map(input => {
-      const start_time = input.timestamp;
-      const duration = input.duration; //in seconds
-      let dt_start_time: Date;
-      let dt_end_time: Date;
-      let iso_start_time: string;
-      let iso_end_time: string;
+      let isoStartTime: string;
+      let isoEndTime: string;
+      let apiTimespan: string;
 
       try {
-        dt_start_time = new Date(start_time);
-        dt_end_time = new Date(start_time);
-        dt_end_time.setSeconds(dt_start_time.getSeconds() + duration);
-        iso_start_time = dt_start_time.toISOString();
-        iso_end_time = dt_end_time.toISOString();
+        const dtStartTime = new Date(input.timestamp);
+        const dtEndTime = new Date(input.timestamp);
+        dtEndTime.setSeconds(dtStartTime.getSeconds() + input.duration);
+        isoStartTime = dtStartTime.toISOString().split('.')[0] + 'Z';
+        isoEndTime = dtEndTime.toISOString().split('.')[0] + 'Z';
+        apiTimespan = isoStartTime + '/' + isoEndTime;
       } catch (error) {
         throw new InputValidationError(
-          `Input's timestamp is invalid [${start_time}]. Exception: [${error}]`
+          `Input's timestamp is invalid [${input.timestamp}]. Exception: [${error}]`
         );
       }
 
       return {
         ...input,
-        apiTimespan: `${iso_start_time}/${iso_end_time}`,
+        isoStartTime: isoStartTime,
+        apiTimespan: apiTimespan,
       };
     });
 
@@ -106,7 +105,7 @@ export const AzureApiPlugin = (globalConfig: AzureApiConfig): ExecutePlugin => {
     const token: TokenResult = await getAzureToken();
     const outputsPromises = safeInputs.map(async (input, index) => {
       const metricTimeSeriesData = await callAzureApi(
-        input.timestamp,
+        input.isoStartTime,
         input.apiTimespan,
         token
       );
@@ -114,6 +113,8 @@ export const AzureApiPlugin = (globalConfig: AzureApiConfig): ExecutePlugin => {
         `execute() => ${index} metricTimeSeriesData: `,
         metricTimeSeriesData
       );
+      delete input.isoStartTime;
+      delete input.apiTimespan;
 
       return {
         ...input,
@@ -174,7 +175,7 @@ export const AzureApiPlugin = (globalConfig: AzureApiConfig): ExecutePlugin => {
    */
   /* istanbul ignore next */
   const callAzureApi = async (
-    start_time: string, //observation.timestamp
+    isoStartTime: string, //observation.isoStartTime
     apiTimespan: string, //observation.apiTimespan
     token: TokenResult
   ): Promise<MetricTimeSeriesData> => {
@@ -188,7 +189,7 @@ export const AzureApiPlugin = (globalConfig: AzureApiConfig): ExecutePlugin => {
 
     //MetricTimeSeriesData template
     const metricTimeSeriesData: MetricTimeSeriesData = {
-      timeStamp: start_time,
+      timeStamp: isoStartTime,
       average: 0.0,
     };
 

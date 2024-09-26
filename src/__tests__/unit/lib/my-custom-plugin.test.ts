@@ -60,7 +60,7 @@ describe('Normal Test: lib/my-custom-plugin: ', () => {
           {
             duration: 3600,
             timestamp: '2024-09-18T00:00:00Z',
-            apiTimespan: '2024-09-18T00:00:00.000Z/2024-09-18T01:00:00.000Z',
+            //apiTimespan: '2024-09-18T00:00:00.000Z/2024-09-18T01:00:00.000Z',
             throughput: 0,
           },
         ];
