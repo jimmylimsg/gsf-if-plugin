@@ -4,6 +4,7 @@ import {AzureApiConfig} from '../../../lib/my-custom-plugin/types';
 
 const {GlobalConfigError} = ERRORS;
 const {InputValidationError} = ERRORS;
+const {ProcessExecutionError} = ERRORS;
 
 describe('Normal Test: lib/my-custom-plugin: ', () => {
   describe('AzureApiPlugin(): ', () => {
@@ -71,7 +72,7 @@ describe('Normal Test: lib/my-custom-plugin: ', () => {
       });
 
       /** if want to fully cover the test, include the actual values below:
-      it('has expected outputs result after run in on provided inputs.', async () => {
+      it('has expected outputs result after run on provided inputs.', async () => {
         const apiConfig: AzureApiConfig = {
           'tenant-id': 'actual value',
           'client-id': 'actual value',
@@ -387,11 +388,12 @@ describe('Exception Test: lib/my-custom-plugin: ', () => {
           },
         ];
         const expectedErrorMessage = 'Failed to request token!';
-        expect.assertions(1);
+        expect.assertions(2);
 
         try {
           await pluginInstance.execute(inputs, {});
         } catch (error: any) {
+          expect(error).toBeInstanceOf(ProcessExecutionError);
           expect(error.message).toMatch(expectedErrorMessage);
         }
       });
@@ -418,11 +420,12 @@ describe('Exception Test: lib/my-custom-plugin: ', () => {
           },
         ];
 		const expectedErrorMessage = 'Failed to request metrics!';
-        expect.assertions(1);
+        expect.assertions(2);
 
         try {
           await pluginInstance.execute(inputs, {});
         } catch (error: any) {
+		  expect(error).toBeInstanceOf(ProcessExecutionError);
           expect(error.message).toMatch(expectedErrorMessage);
         }
       });

@@ -11,6 +11,7 @@ import {
 
 const {GlobalConfigError} = ERRORS;
 const {InputValidationError} = ERRORS;
+const {ProcessExecutionError} = ERRORS;
 
 export const AzureApiPlugin = (globalConfig: AzureApiConfig): ExecutePlugin => {
   const metadata = {
@@ -158,7 +159,7 @@ export const AzureApiPlugin = (globalConfig: AzureApiConfig): ExecutePlugin => {
     //console.log('getAzureToken() => fetch response: ', tokenApiResponse);
 
     if (!tokenApiResponse.ok) {
-      throw new Error(
+      throw new ProcessExecutionError(
         `Failed to request token! Response status: ${tokenApiResponse.status}.`
       );
     } else {
@@ -229,7 +230,7 @@ export const AzureApiPlugin = (globalConfig: AzureApiConfig): ExecutePlugin => {
     //console.log('callAzureApi() => metricApiResponse: ', metricApiResponse);
 
     if (!metricApiResponse.ok) {
-      throw new Error(
+      throw new ProcessExecutionError(
         `Failed to request metrics! Response status: ${metricApiResponse.status}.`
       );
     } else {
