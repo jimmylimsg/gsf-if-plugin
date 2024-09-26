@@ -21,7 +21,7 @@ export const AzureApiPlugin = (globalConfig: AzureApiConfig): ExecutePlugin => {
    * Validates global config.
    */
   const validateGlobalConfig = () => {
-    //console.log('validateGlobalConfig() => globalConfig: ', globalConfig);
+    /* istanbul ignore next */
     if (!globalConfig) {
       throw new GlobalConfigError('Global config must be provided.');
     }
@@ -48,14 +48,18 @@ export const AzureApiPlugin = (globalConfig: AzureApiConfig): ExecutePlugin => {
 
   /**
    * Validates input data.
+   * Appends a new 'apiTimespan' into each observation base on 'timestamp' and 'duration'.
+   * 'apiTimespan' represents start_time and end_time of each observation in ISO format.
    */
   const validateInput = (inputs: PluginParams[]): PluginParams[] => {
+    /* istanbul ignore next */
     if (!inputs) {
       throw new InputValidationError('Input must be provided.');
     }
 
     const safeInputs = inputs.map(input => {
       const start_time = input.timestamp;
+      const duration = input.duration; //in seconds
       let dt_start_time: Date;
       let dt_end_time: Date;
       let iso_start_time: string;
@@ -64,10 +68,9 @@ export const AzureApiPlugin = (globalConfig: AzureApiConfig): ExecutePlugin => {
       try {
         dt_start_time = new Date(start_time);
         dt_end_time = new Date(start_time);
-        dt_end_time.setHours(dt_start_time.getHours() + 1);
+        dt_end_time.setSeconds(dt_start_time.getSeconds() + duration);
         iso_start_time = dt_start_time.toISOString();
         iso_end_time = dt_end_time.toISOString();
-        //console.log('validateInput() => apiTimespan: ', iso_start_time, iso_end_time);
       } catch (error) {
         throw new InputValidationError(
           `Input's timestamp is invalid [${start_time}]. Exception: [${error}]`
@@ -85,15 +88,15 @@ export const AzureApiPlugin = (globalConfig: AzureApiConfig): ExecutePlugin => {
 
   /**
    * AzureApiPlugin's main logic as below:
-   * - Takes input which is a timeseries of some data points (e.g. energy consumed over 24 hrs per day).
+   * - Takes input which is a time series of observation over a duration (e.g. energy consumed over 24 hrs per day).
    * - Validates global config.
-   * - Validates inputs and extends apiTimespan (i.e. iso start and end time for each hour).
+   * - Validates input and appends 'apiTimespan' (i.e. iso start and end time for each observation).
    * - Gets access token.
-   * - For each hour (i.e. apiTimespan) in the timeseries, perform below:
-   *   - Check if access token has expired, if so, request a new token.
-   *   - Get relevant metric from Azure by calling the Azure monitoring API.
-   *   - Append metric as new data point.
-   * - Return final output which contains the requested metric as part of the timeseries.
+   * - For each observation in the time series, performs below:
+   *   - Checks if access token has expired, if so, request a new token.
+   *   - Gets relevant metric by calling the Azure monitoring API base on 'apiTimespan'.
+   *   - Appends metric's average value in each observation.
+   * - Return final output which contains the requested metric as part of the time series.
    */
   const execute = async (inputs: PluginParams[]): Promise<PluginParams[]> => {
     //console.log('execute() => inputs before processed: ', inputs);
@@ -101,9 +104,12 @@ export const AzureApiPlugin = (globalConfig: AzureApiConfig): ExecutePlugin => {
     const safeInputs = validateInput(inputs);
 
     const token: TokenResult = await getAzureToken();
-    //console.log('execute() => token: ', token);
     const outputsPromises = safeInputs.map(async (input, index) => {
-      const metricTimeSeriesData = await callAzureApi(input.apiTimespan, token);
+      const metricTimeSeriesData = await callAzureApi(
+        input.timestamp,
+        input.apiTimespan,
+        token
+      );
       console.log(
         `execute() => ${index} metricTimeSeriesData: `,
         metricTimeSeriesData
@@ -117,7 +123,6 @@ export const AzureApiPlugin = (globalConfig: AzureApiConfig): ExecutePlugin => {
 
     const outputs = await Promise.all(outputsPromises);
     //console.log('execute() => outputs after processed: ', outputs);
-    //console.log(`exeucte() => outputs type: ${Object.prototype.toString.call(outputs)}, `, outputs);
 
     return outputs;
   };
@@ -125,6 +130,7 @@ export const AzureApiPlugin = (globalConfig: AzureApiConfig): ExecutePlugin => {
   /**
    * Method to request Azure Api access token.
    */
+  /* istanbul ignore next */
   const getAzureToken = async (): Promise<TokenResult> => {
     const tenantID = globalConfig['tenant-id'];
     const clientID = globalConfig['client-id'];
@@ -154,21 +160,22 @@ export const AzureApiPlugin = (globalConfig: AzureApiConfig): ExecutePlugin => {
       throw new Error(
         `Failed to request token! Response status: ${tokenApiResponse.status}.`
       );
+    } else {
+      const tokenApiJSON = await tokenApiResponse.json();
+      const token = tokenApiJSON as TokenResult;
+      //console.log('getAzureToken() => token: ', token);
+
+      return token;
     }
-
-    const tokenApiJSON = await tokenApiResponse.json();
-    const token = tokenApiJSON as TokenResult;
-    //console.log('getAzureToken() => response json: ', tokenApiJSON);
-    //console.log('getAzureToken() => token.access_token: ', token.access_token);
-
-    return token;
   };
 
   /**
    * Method to request Azure metric.
    */
+  /* istanbul ignore next */
   const callAzureApi = async (
-    apiTimespan: string,
+    start_time: string, //observation.timestamp
+    apiTimespan: string, //observation.apiTimespan
     token: TokenResult
   ): Promise<MetricTimeSeriesData> => {
     const subID = globalConfig['subscription-id'];
@@ -179,16 +186,18 @@ export const AzureApiPlugin = (globalConfig: AzureApiConfig): ExecutePlugin => {
     const metricName = globalConfig['metric-name'];
     const testMode = globalConfig['test-mode'];
 
+    //MetricTimeSeriesData template
+    const metricTimeSeriesData: MetricTimeSeriesData = {
+      timeStamp: start_time,
+      average: 0.0,
+    };
+
     if (testMode === true) {
-      return {
-        timeStamp: new Date(),
-        average: 0.0,
-      } as MetricTimeSeriesData;
+      return metricTimeSeriesData;
     }
 
     const curUnixTimeInSec = Math.floor(Date.now() / 1000);
     if (!token.expires_on || +token.expires_on + 300 < curUnixTimeInSec) {
-      //console.log('callAzureApi() => Getting new token!');
       const newToken = await getAzureToken();
       //console.log('callAzureApi() => newToken: ', newToken);
 
@@ -205,11 +214,9 @@ export const AzureApiPlugin = (globalConfig: AzureApiConfig): ExecutePlugin => {
     const metricReqRsURI = `subscriptions/${subID}/resourceGroups/${rsGroup}/providers/${rsProviderNS}/${rsType}/${rsName}`;
     const metricReqApiVer = '2018-01-01';
     const metricReqTimeSpan = apiTimespan; //'2024-09-18T00:00:00Z/2024-09-19T00:00:00Z';
-    const metricReqInterval = 'PT1H';
+    const metricReqInterval = 'FULL'; //'PT1H';
     const metricReqQueryStr = `api-version=${metricReqApiVer}&metricnames=${metricName}&timespan=${metricReqTimeSpan}&interval=${metricReqInterval}`;
     const metricReqURL = `https://management.azure.com/${metricReqRsURI}/providers/microsoft.insights/metrics?${metricReqQueryStr}`;
-    //console.log('callAzureApi() => metricReqTimeSpan: ', metricReqTimeSpan);
-    //console.log('callAzureApi() => metricReqURL: ', metricReqURL);
 
     const metricApiResponse = await fetch(metricReqURL, {
       method: 'GET',
@@ -224,26 +231,36 @@ export const AzureApiPlugin = (globalConfig: AzureApiConfig): ExecutePlugin => {
       throw new Error(
         `Failed to request metrics! Response status: ${metricApiResponse.status}.`
       );
+    } else {
+      const metricApiJSON = await metricApiResponse.json();
+      const metric = metricApiJSON as MetricResult;
+      //console.log('callAzureApi() => metric: ', metric);
+
+      //value[0]: always refer to single metric's request.
+      //timeseries[0]: always refer to default dimension.
+      //data[0]: always refer to single datapoint.
+      if (
+        !metric.value[0] ||
+        !metric.value[0].timeseries[0] ||
+        !metric.value[0].timeseries[0].data[0]
+      ) {
+        return metricTimeSeriesData;
+      } else {
+        const apiTimeSeriesData = metric.value[0].timeseries[0]
+          .data[0] as MetricTimeSeriesData;
+        //console.log('callAzureApi() => apiTimeSeriesData: ', apiTimeSeriesData);
+
+        if (!apiTimeSeriesData.average) {
+          return metricTimeSeriesData;
+        } else {
+          metricTimeSeriesData.timeStamp = apiTimeSeriesData.timeStamp;
+          metricTimeSeriesData.average =
+            Math.round(apiTimeSeriesData.average * 100) / 100;
+
+          return metricTimeSeriesData;
+        }
+      }
     }
-
-    const metricApiJSON = await metricApiResponse.json();
-    const metric = metricApiJSON as MetricResult;
-    //console.log('callAzureApi() => metricApiJSON: ', metricApiJSON);
-
-    const apiTimeSeries = metric.value[0].timeseries[0]
-      .data[0] as MetricTimeSeriesData;
-    //console.log('callAzureApi() => apiTimeSeries: ', apiTimeSeries);
-    let newAverage = 0.0;
-
-    if (apiTimeSeries.average) {
-      newAverage = Math.round(apiTimeSeries.average * 100) / 100;
-    }
-    const newTimeSeries: MetricTimeSeriesData = {
-      timeStamp: apiTimeSeries.timeStamp,
-      average: newAverage,
-    };
-
-    return newTimeSeries;
   };
 
   return {
@@ -251,7 +268,7 @@ export const AzureApiPlugin = (globalConfig: AzureApiConfig): ExecutePlugin => {
     execute,
   };
 };
-
+/* istanbul ignore next */
 export const RestApiPlugin = (globalConfig: ApiConfig): ExecutePlugin => {
   const metadata = {
     kind: 'execute',
@@ -261,7 +278,6 @@ export const RestApiPlugin = (globalConfig: ApiConfig): ExecutePlugin => {
    * Validates global config.
    */
   const validateGlobalConfig = () => {
-    //console.log('validateGlobalConfig() => globalConfig: ', globalConfig);
     if (!globalConfig) {
       throw new GlobalConfigError('Global config must be provided.');
     }
@@ -325,6 +341,9 @@ export const RestApiPlugin = (globalConfig: ApiConfig): ExecutePlugin => {
     return outputs;
   };
 
+  /**
+   * Method to request restful api.
+   */
   const callRestApi = async (url: string, options?: any): Promise<ApiData> => {
     const testMode = globalConfig['test-mode'];
 

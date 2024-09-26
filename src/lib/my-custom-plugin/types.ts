@@ -29,8 +29,8 @@ export type MetricResult = {
   resourceregion: string;
 };
 export type MetricValue = {
-  id: string;
-  type: string;
+  id: string; //metric uri
+  type: string; //metric provider
   name: {
     value: string; //metric name
     localizedValue: string;
@@ -46,13 +46,13 @@ export type MetricTimeSeries = {
 };
 export type MetricTimeSeriesMetadata = {
   name: {
-    value: string;
+    value: string; //dimension name
     localizedValue: string;
   };
   value: string;
 };
 export type MetricTimeSeriesData = {
-  timeStamp: Date;
+  timeStamp: string;
   average?: number;
   total?: number;
 };
